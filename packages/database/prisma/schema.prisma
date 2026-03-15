@@ -7,12 +7,86 @@ datasource db {
 
 generator client {
   provider = "prisma-client-js"
-  output = "../generated/client"
+  output   = "../generated/client"
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
+  id          String       @id @default(cuid())
+  role        ROLE         @default(USER)
+  firstName   String?
+  lastName    String?
+  name        String?
+  email       String?      @unique
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  submissions Submission[]
+}
+
+model Problem {
+  id          String        @id @default(cuid())
+  title       String        @unique
+  description String
+  difficulty  DIFFICULTY
+  testCases   TestCase[]
+  constraints Constraints[]
+  examples    Example[]
+  submissions Submission[]
+}
+
+model Submission {
+  id          String    @id @default(cuid())
+  problemId   String
+  submittedBy String
+  language    LANGUAGES
+  code        String
+  status      STATUS
+  createdAt   DateTime  @default(now())
+  user        User      @relation(fields: [submittedBy], references: [id])
+  problem     Problem   @relation(fields: [problemId], references: [id])
+}
+
+model TestCase {
+  id        String  @id @default(cuid())
+  problemId String
+  input     String
+  output    String
+  isSample  Boolean @default(false)
+  problem   Problem @relation(fields: [problemId], references: [id])
+}
+
+model Constraints {
+  id          String  @id @default(cuid())
+  description String
+  problemId   String
+  problem     Problem @relation(fields: [problemId], references: [id])
+}
+
+model Example {
+  id          String  @id @default(cuid())
+  input       String
+  output      String
+  explanation String?
+  problemId   String
+  problem     Problem @relation(fields: [problemId], references: [id])
+}
+
+enum STATUS {
+  PENDING
+  FAILED
+  PASSED
+}
+
+enum ROLE {
+  USER
+  ADMIN
+}
+
+enum LANGUAGES {
+  JAVASCRIPT
+}
+
+enum DIFFICULTY {
+  EASY
+  MEDIUM
+  HARD
 }

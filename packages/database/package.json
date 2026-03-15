@@ -1,5 +1,6 @@
 {
   "name": "@repo/database",
+  "main": "src/client.ts",
   "version": "1.0.0",
   "exports": {
     ".": "./src/client.ts"

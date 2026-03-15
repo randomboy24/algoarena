@@ -14,6 +14,6 @@ services:
       - POSTGRES_PASSWORD=sebi_test_4444
       - POSTGRES_DB=turborepo
     ports:
-      - '5432:5432' # Expose the Postgres port to your local machine
+      - "5432:5432" # Expose the Postgres port to your local machine
     volumes:
       - postgres_data:/var/lib/postgresql/data
