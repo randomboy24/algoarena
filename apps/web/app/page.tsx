@@ -21,9 +21,8 @@ async function getAcceptanceRate(problemId: string) {
 
 export default async function IndexPage() {
   const problems = await prisma.problem.findMany();
-  
 
-// console.log(problem);
+  // console.log(problem);
 
   // Get submission counts and acceptance rates for all problems
   const problemsWithStats = await Promise.all(
@@ -56,7 +55,7 @@ export default async function IndexPage() {
           <div className="flex items-center justify-between">
             {/* Title */}
             <div className="flex items-center gap-2">
-              <Code2 className="w-5 h-5 text-[#3B82F6]" />
+              {/* <Code2 className="w-5 h-5 text-[#3B82F6]" /> */}
               <h1 className="text-lg font-medium text-white">Problems</h1>
               <span className="text-xs text-[#6B7280] ml-2">
                 ({totalProblems})

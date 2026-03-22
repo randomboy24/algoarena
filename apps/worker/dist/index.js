@@ -1,23 +1,10 @@
-// // import * as db from "@repo/database";
-// // // console.log(await db.prisma.user.findMany());
-// // console.log(await db.prisma.user.findMany());
-// //  function main() {
-// //      return new Promise(function (res,rej)  {
-// //      })
-// // }
-// async function main() {
-//   const response = await fetch("https://jsonplaceholder.typicode.com/todos/1");
-//   const data = await response.json();
-//   console.log(data);
-// }
-// main();
 import { exec } from "child_process";
+import { prisma } from "@repo/database";
+import { Worker } from "bullmq";
 const testCases = [
     { input: [3, 5], expected: 8 },
     { input: [10, 2], expected: 12 },
 ];
-import { prisma } from "@repo/database";
-import { Worker } from "bullmq";
 const worker = new Worker("submission-queue", async (job) => {
     console.log("worker hit");
     if (!job.id) {
@@ -34,7 +21,46 @@ const worker = new Worker("submission-queue", async (job) => {
         // test case example --> input: "4, 3", output: "7"
         // we have to run the user code with the test case input and check if the output is same as the test case output
         // simulate user code
-        const userCode = `function solve(n,m) { return n + m }`;
+        const submission = await prisma.submission.findUnique({
+            where: {
+                id: submissionId,
+            },
+            select: {
+                code: true,
+                status: true,
+                language: true,
+                problemId: true,
+                type: true,
+            },
+        });
+        if (!submission) {
+            return;
+        }
+        let testCases;
+        if (submission.type == "RUN") {
+            testCases = await prisma.testCase.findMany({
+                where: {
+                    problemId: submission.problemId,
+                    isSample: true,
+                },
+                select: {
+                    input: true,
+                    output: true,
+                },
+            });
+        }
+        else {
+            testCases = await prisma.testCase.findMany({
+                where: {
+                    problemId: submission.problemId,
+                },
+                select: {
+                    input: true,
+                    output: true,
+                },
+            });
+        }
+        const userCode = `${submission.code}`;
         const wrapped = `${userCode}
     const fs = require("fs");
     const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
@@ -42,9 +68,11 @@ const worker = new Worker("submission-queue", async (job) => {
     console.log(JSON.stringify(result))
     `;
         for (const tc of testCases) {
-            const cmd = `docker run --rm -i node:18 node -e '${wrapped}'`;
+            const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" node:18 node -e '${wrapped}'`;
             const output = await new Promise((resolve, reject) => {
-                const child = exec(cmd, (err, stdout) => {
+                const child = exec(cmd, {
+                    timeout: 5000,
+                }, (err, stdout) => {
                     if (err)
                         reject(err);
                     resolve(stdout.trim());
@@ -52,7 +80,7 @@ const worker = new Worker("submission-queue", async (job) => {
                 child.stdin?.write(JSON.stringify(tc.input));
                 child.stdin?.end();
             });
-            if (JSON.parse(output) !== tc.expected) {
+            if (JSON.parse(output) !== tc.output) {
                 console.log("FAILED");
                 await prisma.submission.update({
                     where: {
@@ -91,6 +119,6 @@ const worker = new Worker("submission-queue", async (job) => {
         port: 6379,
         maxRetriesPerRequest: null,
     },
+    concurrency: 5,
 });
-// await worker.run();
 //# sourceMappingURL=index.js.map

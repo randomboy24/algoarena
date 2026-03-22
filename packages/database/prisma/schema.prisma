@@ -15,7 +15,6 @@ model User {
   role        ROLE         @default(USER)
   firstName   String?
   lastName    String?
-  name        String?
   email       String?      @unique
   createdAt   DateTime     @default(now())
   updatedAt   DateTime     @updatedAt
@@ -34,15 +33,16 @@ model Problem {
 }
 
 model Submission {
-  id          String    @id @default(cuid())
+  id          String         @id @default(cuid())
   problemId   String
   submittedBy String
   language    LANGUAGES
   code        String
   status      STATUS
-  createdAt   DateTime  @default(now())
-  user        User      @relation(fields: [submittedBy], references: [id])
-  problem     Problem   @relation(fields: [problemId], references: [id])
+  type        SUBMISSIONTYPE @default(RUN)
+  createdAt   DateTime       @default(now())
+  user        User           @relation(fields: [submittedBy], references: [id])
+  problem     Problem        @relation(fields: [problemId], references: [id])
 }
 
 model TestCase {
@@ -89,4 +89,9 @@ enum DIFFICULTY {
   EASY
   MEDIUM
   HARD
+}
+
+enum SUBMISSIONTYPE {
+  RUN
+  SUBMIT
 }
