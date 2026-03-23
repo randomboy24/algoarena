@@ -32,7 +32,7 @@ export const POST = async (req: Request) => {
 
     console.log("submission added to the queue");
 
-    return NextResponse.json({ jobId: submisson.id }, { status: 200 });
+    return NextResponse.json({ submissionId: submisson.id }, { status: 200 });
   } catch (err) {
     NextResponse.json(
       {

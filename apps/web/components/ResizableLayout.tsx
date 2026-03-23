@@ -72,7 +72,7 @@ export function ResizableLayout({ leftPanel, rightPanel }: any) {
           style={{ flexBasis: `${vSplit}%` }}
           className="overflow-hidden min-h-0"
         >
-          <CodeEditor template={""} />
+          <CodeEditor template={""} problemId={rightPanel.id} />
         </div>
 
         {/* V RESIZER */}

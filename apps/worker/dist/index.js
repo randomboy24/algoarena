@@ -67,7 +67,10 @@ const worker = new Worker("submission-queue", async (job) => {
     const result = solve(...args)
     console.log(JSON.stringify(result))
     `;
+        console.log("userCode: ", wrapped);
+        console.log("testcases length: ", testCases.length);
         for (const tc of testCases) {
+            console.log(JSON.stringify(tc));
             const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" node:18 node -e '${wrapped}'`;
             const output = await new Promise((resolve, reject) => {
                 const child = exec(cmd, {
@@ -77,10 +80,14 @@ const worker = new Worker("submission-queue", async (job) => {
                         reject(err);
                     resolve(stdout.trim());
                 });
-                child.stdin?.write(JSON.stringify(tc.input));
+                child.stdin?.write(tc.input);
                 child.stdin?.end();
             });
-            if (JSON.parse(output) !== tc.output) {
+            console.log("output: ", JSON.parse(output));
+            console.log("tc.output: ", tc.output);
+            const actual = JSON.parse(output);
+            const expected = JSON.parse(tc.output);
+            if (JSON.stringify(actual) !== JSON.stringify(expected)) {
                 console.log("FAILED");
                 await prisma.submission.update({
                     where: {
