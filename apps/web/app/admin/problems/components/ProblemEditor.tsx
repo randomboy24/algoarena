@@ -28,6 +28,8 @@ type ProblemPayload = {
 
 type ProblemEditorProps = {
   problem: ProblemPayload;
+  mode?: "create" | "edit";
+  onSuccess?: (problemId: string) => void;
 };
 
 const emptyConstraint = (): ConstraintItem => ({ description: "" });
@@ -42,7 +44,11 @@ const emptyTestCase = (): TestCaseItem => ({
   isSample: false,
 });
 
-export const ProblemEditor = ({ problem }: ProblemEditorProps) => {
+export const ProblemEditor = ({
+  problem,
+  mode = "edit",
+  onSuccess,
+}: ProblemEditorProps) => {
   const [formState, setFormState] = useState<ProblemPayload>(() => ({
     ...problem,
     constraints: problem.constraints.length
@@ -112,8 +118,14 @@ export const ProblemEditor = ({ problem }: ProblemEditorProps) => {
     startTransition(() => {
       void (async () => {
         try {
-          const response = await fetch(`/api/v1/admin/problems/${problem.id}`, {
-            method: "PUT",
+          const method = mode === "create" ? "POST" : "PUT";
+          const endpoint =
+            mode === "create"
+              ? `/api/v1/admin/problems`
+              : `/api/v1/admin/problems/${problem.id}`;
+
+          const response = await fetch(endpoint, {
+            method,
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
           });
@@ -122,7 +134,14 @@ export const ProblemEditor = ({ problem }: ProblemEditorProps) => {
             throw new Error("Failed to save changes");
           }
 
-          setMessage("Changes saved successfully.");
+          const data = await response.json();
+
+          if (mode === "create") {
+            setMessage("Problem created successfully!");
+            onSuccess?.(data.id);
+          } else {
+            setMessage("Changes saved successfully.");
+          }
         } catch (error) {
           console.error(error);
           setMessage("Unable to save changes. Try again.");
@@ -140,7 +159,9 @@ export const ProblemEditor = ({ problem }: ProblemEditorProps) => {
               Problem details
             </h2>
             <p className="text-xs text-[#94A3B8] mt-1">
-              Edit fields and save changes to the database.
+              {mode === "create"
+                ? "Create a new problem with all necessary details."
+                : "Edit fields and save changes to the database."}
             </p>
           </div>
           <button
@@ -148,7 +169,13 @@ export const ProblemEditor = ({ problem }: ProblemEditorProps) => {
             disabled={isPending}
             className="px-4 py-2 rounded-lg bg-[#3B82F6] text-sm font-medium text-white hover:bg-[#2563EB] transition-colors disabled:opacity-60"
           >
-            {isPending ? "Saving..." : "Save changes"}
+            {isPending
+              ? mode === "create"
+                ? "Creating..."
+                : "Saving..."
+              : mode === "create"
+                ? "Create problem"
+                : "Save changes"}
           </button>
         </div>
         {message ? (
