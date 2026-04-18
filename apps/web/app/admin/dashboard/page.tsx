@@ -19,6 +19,12 @@ export default function AdminDashboard() {
             </div>
             <div className="flex items-center gap-3">
               <a
+                href="/admin/contests"
+                className="px-4 py-2 rounded-lg border border-[#1E2A3A] text-sm text-[#9CA3AF] hover:text-white hover:border-[#3B82F6] transition-colors"
+              >
+                Contests
+              </a>
+              <a
                 href="/admin/problems"
                 className="px-4 py-2 rounded-lg border border-[#1E2A3A] text-sm text-[#9CA3AF] hover:text-white hover:border-[#3B82F6] transition-colors"
               >

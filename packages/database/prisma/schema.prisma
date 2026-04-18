@@ -11,25 +11,28 @@ generator client {
 }
 
 model User {
-  id          String       @id @default(cuid())
-  role        ROLE         @default(USER)
+  id          String               @id @default(cuid())
+  role        ROLE                 @default(USER)
   firstName   String?
   lastName    String?
-  email       String?      @unique
-  createdAt   DateTime     @default(now())
-  updatedAt   DateTime     @updatedAt
+  email       String?              @unique
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
   submissions Submission[]
+  contests    ContestParticipant[]
 }
 
 model Problem {
-  id          String        @id @default(cuid())
-  title       String        @unique
+  id          String           @id @default(cuid())
+  title       String           @unique
   description String
+  isPublic    Boolean          @default(true)
   difficulty  DIFFICULTY
   testCases   TestCase[]
   constraints Constraints[]
   examples    Example[]
   submissions Submission[]
+  contest     ContestProblem[]
 }
 
 model Submission {
@@ -41,8 +44,10 @@ model Submission {
   status      STATUS
   type        SUBMISSIONTYPE @default(RUN)
   createdAt   DateTime       @default(now())
+  contestId   String?
   user        User           @relation(fields: [submittedBy], references: [id])
   problem     Problem        @relation(fields: [problemId], references: [id])
+  contest     Contest?       @relation(fields: [contestId], references: [id])
 }
 
 model TestCase {
@@ -70,6 +75,48 @@ model Example {
   problem     Problem @relation(fields: [problemId], references: [id])
 }
 
+model Contest {
+  id           String               @id @default(cuid())
+  title        String
+  description  String?
+  startTime    DateTime
+  endTime      DateTime
+  createdAt    DateTime             @default(now())
+  updatedAt    DateTime             @updatedAt
+  status       CONTESTSTATUS        @default(UPCOMING)
+  problems     ContestProblem[]
+  participants ContestParticipant[]
+  submissions  Submission[]
+}
+
+model ContestProblem {
+  id              String  @id @default(cuid())
+  contestId       String
+  problemId       String
+  points          Int
+  order           Int
+  makePublicAfter Boolean @default(false)
+  contest         Contest @relation(fields: [contestId], references: [id])
+  problem         Problem @relation(fields: [problemId], references: [id])
+
+  @@unique([contestId, problemId])
+}
+
+model ContestParticipant {
+  id             String    @id @default(cuid())
+  userId         String
+  contestId      String
+  score          Int       @default(0)
+  rank           Int?
+  solvedProblems String[]
+  lastSolveTime  DateTime?
+  registeredAt   DateTime  @default(now())
+  user           User      @relation(fields: [userId], references: [id])
+  contest        Contest   @relation(fields: [contestId], references: [id])
+
+  @@unique([userId, contestId])
+}
+
 enum STATUS {
   PENDING
   FAILED
@@ -94,4 +141,10 @@ enum DIFFICULTY {
 enum SUBMISSIONTYPE {
   RUN
   SUBMIT
+}
+
+enum CONTESTSTATUS {
+  UPCOMING
+  ACTIVE
+  ENDED
 }

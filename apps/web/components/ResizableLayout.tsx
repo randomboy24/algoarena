@@ -5,7 +5,7 @@ import { GripVertical, GripHorizontal } from "lucide-react";
 import { CodeEditor } from "./CodeEditor";
 import { TestCases } from "./TestCases";
 
-export function ResizableLayout({ leftPanel, rightPanel }: any) {
+export function ResizableLayout({ leftPanel, rightPanel, contestId }: any) {
   const [hSplit, setHSplit] = useState(40);
   const [vSplit, setVSplit] = useState(60);
 
@@ -72,7 +72,11 @@ export function ResizableLayout({ leftPanel, rightPanel }: any) {
           style={{ flexBasis: `${vSplit}%` }}
           className="overflow-hidden min-h-0"
         >
-          <CodeEditor template={""} problemId={rightPanel.id} />
+          <CodeEditor
+            template={""}
+            problemId={rightPanel.id}
+            contestId={contestId}
+          />
         </div>
 
         {/* V RESIZER */}

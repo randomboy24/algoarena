@@ -1,6 +1,6 @@
 import { Show, SignInButton, SignUpButton, UserButton } from "@clerk/nextjs";
 import { auth } from "@clerk/nextjs/server";
-import { Code2, Menu, X } from "lucide-react";
+import { Code2, User } from "lucide-react";
 
 export const Navbar = async () => {
   const { userId } = await auth();
@@ -29,10 +29,10 @@ export const Navbar = async () => {
               Problems
             </a>
             <a
-              href="/contest"
+              href="/contests"
               className="text-sm text-[#9CA3AF] hover:text-white transition-colors duration-200"
             >
-              Contest
+              Contests
             </a>
             <a
               href="/discuss"
@@ -46,13 +46,16 @@ export const Navbar = async () => {
           <div className="flex items-center gap-3">
             <Show when="signed-in">
               <div className="flex items-center gap-3">
-                {/* Optional: Add XP/Points display */}
-                <div className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#1E2A3A] rounded-lg border border-[#374151]">
-                  <span className="text-xs font-medium text-[#F59E0B]">
-                    150
+                {/* Profile Link */}
+                <a
+                  href={`/profile/${userId}`}
+                  className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 bg-[#1E2A3A] rounded-lg border border-[#374151] hover:border-[#3B82F6] transition-colors duration-200"
+                >
+                  <User className="w-4 h-4 text-[#3B82F6]" />
+                  <span className="text-xs font-medium text-[#9CA3AF]">
+                    Profile
                   </span>
-                  <span className="text-xs text-[#6B7280]">xp</span>
-                </div>
+                </a>
 
                 {/* User Button with custom styling */}
                 <UserButton

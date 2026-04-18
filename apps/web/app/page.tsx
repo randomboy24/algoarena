@@ -20,7 +20,12 @@ async function getAcceptanceRate(problemId: string) {
 }
 
 export default async function IndexPage() {
-  const problems = await prisma.problem.findMany();
+  // Only fetch public problems (exclude contest-exclusive ones)
+  const problems = await prisma.problem.findMany({
+    where: {
+      isPublic: true,
+    },
+  });
 
   // console.log(problem);
 

@@ -1,10 +1,6 @@
 import { exec } from "child_process";
 import { prisma } from "@repo/database";
 import { Worker } from "bullmq";
-const testCases = [
-    { input: [3, 5], expected: 8 },
-    { input: [10, 2], expected: 12 },
-];
 const worker = new Worker("submission-queue", async (job) => {
     console.log("worker hit");
     if (!job.id) {
@@ -20,7 +16,6 @@ const worker = new Worker("submission-queue", async (job) => {
         // user code example --> function sum(n,m) { return n + m }
         // test case example --> input: "4, 3", output: "7"
         // we have to run the user code with the test case input and check if the output is same as the test case output
-        // simulate user code
         const submission = await prisma.submission.findUnique({
             where: {
                 id: submissionId,
@@ -31,6 +26,8 @@ const worker = new Worker("submission-queue", async (job) => {
                 language: true,
                 problemId: true,
                 type: true,
+                contestId: true,
+                submittedBy: true,
             },
         });
         if (!submission) {
@@ -100,6 +97,7 @@ const worker = new Worker("submission-queue", async (job) => {
                 return;
             }
         }
+        // All tests passed - update submission status
         await prisma.submission.update({
             where: {
                 id: submissionId,
@@ -109,8 +107,13 @@ const worker = new Worker("submission-queue", async (job) => {
             },
         });
         console.log("PASSED");
+        // If this is a contest submission, update the participant's score
+        if (submission.contestId && submission.submittedBy) {
+            await updateContestScore(submission.contestId, submission.submittedBy, submission.problemId);
+        }
     }
     catch (err) {
+        console.error("Error processing submission:", err);
         await prisma.submission.update({
             where: {
                 id: submissionId,
@@ -128,4 +131,60 @@ const worker = new Worker("submission-queue", async (job) => {
     },
     concurrency: 5,
 });
+/**
+ * Update contest participant's score after a successful submission
+ */
+async function updateContestScore(contestId, userId, problemId) {
+    try {
+        // Get the contest participant
+        const participant = await prisma.contestParticipant.findUnique({
+            where: {
+                userId_contestId: {
+                    userId,
+                    contestId,
+                },
+            },
+        });
+        if (!participant) {
+            console.log("Participant not found for contest score update");
+            return;
+        }
+        // Check if this problem was already solved
+        if (participant.solvedProblems.includes(problemId)) {
+            console.log("Problem already solved, skipping score update");
+            return;
+        }
+        // Get the contest problem to find the points
+        const contestProblem = await prisma.contestProblem.findUnique({
+            where: {
+                contestId_problemId: {
+                    contestId,
+                    problemId,
+                },
+            },
+        });
+        if (!contestProblem) {
+            console.log("Contest problem not found");
+            return;
+        }
+        // Update the participant's score and solved problems
+        await prisma.contestParticipant.update({
+            where: {
+                userId_contestId: {
+                    userId,
+                    contestId,
+                },
+            },
+            data: {
+                score: participant.score + contestProblem.points,
+                solvedProblems: [...participant.solvedProblems, problemId],
+                lastSolveTime: new Date(),
+            },
+        });
+        console.log(`Updated contest score for user ${userId}: +${contestProblem.points} points`);
+    }
+    catch (err) {
+        console.error("Error updating contest score:", err);
+    }
+}
 //# sourceMappingURL=index.js.map

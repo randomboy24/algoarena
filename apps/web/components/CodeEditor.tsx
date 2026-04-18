@@ -8,9 +8,14 @@ import { useAuth } from "@clerk/nextjs";
 interface CodeEditorProps {
   template: string;
   problemId: string;
+  contestId?: string;
 }
 
-export function CodeEditor({ template, problemId }: CodeEditorProps) {
+export function CodeEditor({
+  template,
+  problemId,
+  contestId,
+}: CodeEditorProps) {
   const [code, setCode] = useState(template);
   const [language, setLanguage] = useState("javascript");
   const [isRunning, setIsRunning] = useState(false);
@@ -46,6 +51,7 @@ export function CodeEditor({ template, problemId }: CodeEditorProps) {
           language: "JAVASCRIPT",
           problemId: problemId,
           submittedBy: userId,
+          contestId: contestId,
         }),
       });
 
