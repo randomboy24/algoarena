@@ -14,6 +14,8 @@ export default async function Page({
       title: true,
       description: true,
       difficulty: true,
+      starterCodeJavaScript: true,
+      starterCodePython: true,
       constraints: { select: { id: true, description: true } },
       examples: {
         select: { id: true, input: true, output: true, explanation: true },

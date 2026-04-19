@@ -11,6 +11,8 @@ const emptyProblem = {
   constraints: [],
   examples: [],
   testCases: [],
+  starterCodeJavaScript: "",
+  starterCodePython: "",
 };
 
 export default function CreateProblemPage() {

@@ -75,6 +75,8 @@ export function ResizableLayout({ leftPanel, rightPanel, contestId }: any) {
           <CodeEditor
             template={""}
             problemId={rightPanel.id}
+            starterCodeJS={rightPanel.starterCodeJavaScript}
+            starterCodePython={rightPanel.starterCodePython}
             contestId={contestId}
           />
         </div>

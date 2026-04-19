@@ -24,6 +24,8 @@ type ProblemPayload = {
   constraints: ConstraintItem[];
   examples: ExampleItem[];
   testCases: TestCaseItem[];
+  starterCodeJavaScript: string;
+  starterCodePython: string;
 };
 
 type ProblemEditorProps = {
@@ -56,6 +58,8 @@ export const ProblemEditor = ({
       : [emptyConstraint()],
     examples: problem.examples.length ? problem.examples : [emptyExample()],
     testCases: problem.testCases.length ? problem.testCases : [emptyTestCase()],
+    starterCodeJavaScript: problem.starterCodeJavaScript || "",
+    starterCodePython: problem.starterCodePython || "",
   }));
   const [message, setMessage] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -224,6 +228,37 @@ export const ProblemEditor = ({
             rows={6}
             className="mt-2 w-full rounded-lg border border-[#1E2A3A] bg-[#0B1B2D] px-4 py-3 text-sm text-white focus:border-[#3B82F6] focus:outline-none"
           />
+        </div>
+
+        <div className="mt-5 grid gap-4 md:grid-cols-2">
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-[#64748B]">
+              JavaScript Starter Code
+            </label>
+            <textarea
+              value={formState.starterCodeJavaScript}
+              onChange={(event) =>
+                updateField("starterCodeJavaScript", event.target.value)
+              }
+              rows={5}
+              placeholder="function solution() {&#10;  // Write your solution here&#10;}"
+              className="mt-2 w-full rounded-lg border border-[#1E2A3A] bg-[#0B1B2D] px-4 py-3 text-xs text-white focus:border-[#3B82F6] focus:outline-none font-mono"
+            />
+          </div>
+          <div>
+            <label className="text-xs uppercase tracking-[0.2em] text-[#64748B]">
+              Python Starter Code
+            </label>
+            <textarea
+              value={formState.starterCodePython}
+              onChange={(event) =>
+                updateField("starterCodePython", event.target.value)
+              }
+              rows={5}
+              placeholder="def solution():&#10;    # Write your solution here&#10;    pass"
+              className="mt-2 w-full rounded-lg border border-[#1E2A3A] bg-[#0B1B2D] px-4 py-3 text-xs text-white focus:border-[#3B82F6] focus:outline-none font-mono"
+            />
+          </div>
         </div>
       </div>
 

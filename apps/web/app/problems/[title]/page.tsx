@@ -136,6 +136,8 @@ export default async function ProblemPage({ params }: PageProps) {
       title: true,
       difficulty: true,
       description: true,
+      starterCodeJavaScript: true,
+      starterCodePython: true,
       examples: {
         select: {
           input: true,

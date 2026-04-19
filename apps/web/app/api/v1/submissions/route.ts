@@ -4,7 +4,7 @@ import { prisma } from "@repo/database";
 import { auth } from "@clerk/nextjs/server";
 
 export const POST = async (req: Request) => {
-  const { code, language, problemId, contestId } = await req.json();
+  const { code, language, problemId, contestId, type } = await req.json();
 
   // Get authenticated user
   const { userId } = await auth();
@@ -80,8 +80,9 @@ export const POST = async (req: Request) => {
     const submission = await prisma.submission.create({
       data: {
         code: code,
-        language: "JAVASCRIPT",
+        language: language,
         status: "PENDING",
+        type: type || "RUN",
         problemId: problemId,
         submittedBy: userId,
         contestId: contestId || null,

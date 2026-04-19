@@ -22,6 +22,8 @@ type Payload = {
   constraints: ConstraintInput[];
   examples: ExampleInput[];
   testCases: TestCaseInput[];
+  starterCodeJavaScript: string;
+  starterCodePython: string;
 };
 
 export const PUT = async (
@@ -48,6 +50,8 @@ export const PUT = async (
         title: body.title,
         description: body.description,
         difficulty: body.difficulty,
+        starterCodeJavaScript: body.starterCodeJavaScript,
+        starterCodePython: body.starterCodePython,
         constraints: {
           deleteMany: {
             problemId: id,

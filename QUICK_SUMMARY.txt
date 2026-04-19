@@ -1,0 +1,168 @@
+═══════════════════════════════════════════════════════════════════════════════
+                    ALGOARENA SUBMISSION SYSTEM SUMMARY
+═══════════════════════════════════════════════════════════════════════════════
+
+1. RUN SUBMISSION FLOW - FULLY IMPLEMENTED ✅
+   ────────────────────────────────────────
+   User Code → Frontend (CodeEditor)
+              ↓
+              POST /api/v1/submissions {code, language, problemId}
+              ↓
+              Backend: Create Submission (status: PENDING, type: RUN default)
+              ↓
+              Add to BullMQ Queue
+              ↓
+              Return submissionId
+              ↓
+              Frontend polls every 2s: GET /api/v1/submissions/{id}
+              ↓
+              Worker: Runs SAMPLE test cases only (isSample: true)
+              ↓
+              Update status: PASSED or FAILED
+              ↓
+              Frontend shows generic result dialog
+
+   LIMITATIONS:
+   - type: "RUN" parameter never sent to backend (uses default)
+   - No detailed test results stored
+   - No error messages captured
+   - Generic feedback only
+
+
+2. STARTER CODE MECHANISM - DOES NOT EXIST ❌
+   ───────────────────────────────────────────
+   Missing:
+   - No 'starterCode' field in Problem model
+   - No admin UI to set starter code
+   - No API endpoint to fetch it
+   - CodeEditor always gets empty template ("")
+
+   Result: Users start with blank editor always
+
+
+3. PROBLEM MODEL FIELDS - INCOMPLETE
+   ─────────────────────────────────
+   Has:
+   ✅ id, title, description, isPublic, difficulty
+   ✅ testCases[], constraints[], examples[]
+   ✅ submissions[], contest[]
+   
+   Missing:
+   ❌ starterCode (STRING)
+   ❌ language (for language-specific templates)
+
+
+4. POST-SUBMISSION DISPLAY - MINIMAL ⚠️
+   ────────────────────────────────────
+   Shows:
+   ✅ Loading state with spinner
+   ✅ Result dialog: PASSED or FAILED
+   ✅ Status badge with color
+   ✅ Generic success/failure message
+   
+   Missing:
+   ❌ Which test cases passed/failed
+   ❌ Expected vs actual output
+   ❌ Error messages
+   ❌ Execution time/memory
+   ❌ Submission history
+   ❌ Test results panel never updates
+
+
+5. WORKER EXECUTION - ROBUST ✅
+   ──────────────────────────
+   ✅ Docker isolation (node:18)
+   ✅ Resource limits: 128MB RAM, 0.5 CPU
+   ✅ 5-second timeout
+   ✅ Test case filtering (RUN vs SUBMIT)
+   ✅ Contest score updates on success
+
+   ❌ No error capture
+   ❌ No output on failure
+   ❌ No execution metrics
+
+
+6. STATUS TRACKING & STORAGE
+   ──────────────────────────
+   Database stores:
+   ✅ status (PENDING, PASSED, FAILED)
+   ✅ type (RUN, SUBMIT)
+   ✅ code, language, timestamps
+   ✅ Contest score updates
+   
+   NOT stored:
+   ❌ Test case results
+   ❌ Error messages
+   ❌ Execution details
+   ❌ Output comparison data
+
+
+═══════════════════════════════════════════════════════════════════════════════
+KEY FILES INVOLVED:
+═══════════════════════════════════════════════════════════════════════════════
+
+Frontend:
+  /apps/web/components/CodeEditor.tsx ........... RUN button, polling logic
+  /apps/web/components/TestCases.tsx ........... Test display (disconnected)
+  /apps/web/components/ResizableLayout.tsx .... Layout container
+
+Backend:
+  /apps/web/app/api/v1/submissions/route.ts ... Create submission
+  /apps/web/app/api/v1/submissions/[jobId]/route.ts ... Get status
+
+Worker:
+  /apps/worker/src/index.ts .................... Execution engine
+
+Database:
+  /packages/database/prisma/schema.prisma ..... Schema definition
+
+Queue:
+  /packages/queue/src/index.ts ................. BullMQ setup
+
+
+═══════════════════════════════════════════════════════════════════════════════
+CRITICAL GAPS:
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Backend doesn't receive type parameter (always defaults to RUN)
+   → Fix: Add `type` to submission creation API
+
+2. Submission type never stored correctly for SUBMIT feature
+   → Currently only RUN feature works
+
+3. Test results not captured or returned to frontend
+   → TestCases component shows mock data, not real results
+
+4. No starter code support
+   → Database schema missing field
+   → Admin UI missing field
+   → API doesn't retrieve it
+
+5. Error handling is basic
+   → Failures don't explain why
+   → No output shown on test failure
+
+
+═══════════════════════════════════════════════════════════════════════════════
+NEXT STEPS FOR STARTER CODE FEATURE:
+═══════════════════════════════════════════════════════════════════════════════
+
+1. Add to Prisma schema:
+   starterCode String?
+   starterCodeLanguage String? (or single LANGUAGES field)
+
+2. Run migration:
+   npx prisma migrate dev
+
+3. Update ProblemEditor.tsx:
+   Add textarea field for starter code
+
+4. Update admin API:
+   Include starterCode in payload
+
+5. Fetch in ResizableLayout:
+   Pass problem.starterCode to CodeEditor
+
+6. Initialize CodeEditor:
+   setCode(template || problem.starterCode || "")
+

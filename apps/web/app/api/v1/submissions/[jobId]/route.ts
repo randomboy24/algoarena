@@ -4,7 +4,7 @@ import { NextRequest, NextResponse } from "next/server";
 export const GET = async (
   req: NextRequest,
   { params }: { params: Promise<{ jobId: string }> },
-) => {
+): Promise<NextResponse> => {
   const { jobId } = await params;
   if (!jobId) {
     return NextResponse.json(
@@ -24,6 +24,10 @@ export const GET = async (
       },
       select: {
         status: true,
+        testResults: true,
+        executionTimeMs: true,
+        memoryUsedMb: true,
+        type: true,
       },
     });
     if (!submission) {
@@ -39,6 +43,10 @@ export const GET = async (
 
     return NextResponse.json({
       status: submission.status,
+      type: submission.type,
+      testResults: submission.testResults,
+      executionTimeMs: submission.executionTimeMs,
+      memoryUsedMb: submission.memoryUsedMb,
     });
   } catch (err) {
     return NextResponse.json(

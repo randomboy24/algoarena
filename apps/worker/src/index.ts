@@ -2,6 +2,15 @@ import { exec } from "child_process";
 import { prisma } from "@repo/database";
 import { Worker } from "bullmq";
 
+interface TestResult {
+  testCaseId: string;
+  testCaseInput: string;
+  testCaseOutput: string;
+  actualOutput: string;
+  passed: boolean;
+  errorMessage?: string;
+}
+
 const worker = new Worker(
   "submission-queue",
   async (job) => {
@@ -16,10 +25,6 @@ const worker = new Worker(
       return;
     }
     try {
-      // user code example --> function sum(n,m) { return n + m }
-      // test case example --> input: "4, 3", output: "7"
-      // we have to run the user code with the test case input and check if the output is same as the test case output
-
       const submission = await prisma.submission.findUnique({
         where: {
           id: submissionId,
@@ -37,6 +42,8 @@ const worker = new Worker(
       if (!submission) {
         return;
       }
+
+      // Fetch test cases based on submission type
       let testCases;
       if (submission.type == "RUN") {
         testCases = await prisma.testCase.findMany({
@@ -45,6 +52,7 @@ const worker = new Worker(
             isSample: true,
           },
           select: {
+            id: true,
             input: true,
             output: true,
           },
@@ -55,78 +63,130 @@ const worker = new Worker(
             problemId: submission.problemId,
           },
           select: {
+            id: true,
             input: true,
             output: true,
           },
         });
       }
 
-      const userCode = `${submission.code}`;
-      const wrapped = `${userCode}
-    const fs = require("fs");
-    const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
-    const result = solve(...args)
-    console.log(JSON.stringify(result))
-    `;
+      const userCode = submission.code;
+      const language = submission.language;
 
-      console.log("userCode: ", wrapped);
       console.log("testcases length: ", testCases.length);
+      console.log("language: ", language);
+
+      const testResults: TestResult[] = [];
+      let totalExecutionTimeMs = 0;
+      let maxMemoryUsedMb = 0;
+      let hasFailed = false;
+
+      // Execute each test case
       for (const tc of testCases) {
-        console.log(JSON.stringify(tc));
-        const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" node:18 node -e '${wrapped}'`;
-        const output: string = await new Promise((resolve, reject) => {
-          const child = exec(
-            cmd,
-            {
-              timeout: 5000,
-            },
-            (err, stdout) => {
-              if (err) reject(err);
-              resolve(stdout.trim());
-            },
+        console.log(`Running test case ${tc.id}`);
+
+        try {
+          let startTime = Date.now();
+          const result = await executeCode(
+            userCode,
+            tc.input,
+            language,
+            submission.language === "PYTHON",
           );
-          child.stdin?.write(tc.input);
-          child.stdin?.end();
-        });
-        console.log("output: ", JSON.parse(output));
-        console.log("tc.output: ", tc.output);
-        const actual = JSON.parse(output);
-        const expected = JSON.parse(tc.output);
+          const endTime = Date.now();
 
-        if (JSON.stringify(actual) !== JSON.stringify(expected)) {
-          console.log("FAILED");
+          const executionTimeMs = endTime - startTime;
+          totalExecutionTimeMs += executionTimeMs;
 
-          await prisma.submission.update({
-            where: {
-              id: submissionId,
-            },
-            data: {
-              status: "FAILED",
-            },
-          });
+          console.log("execution time (ms): ", executionTimeMs);
+          console.log("actual output: ", result.output);
+          console.log("expected output: ", tc.output);
 
-          return;
+          const actual = JSON.parse(result.output);
+          const expected = JSON.parse(tc.output);
+
+          const passed = JSON.stringify(actual) === JSON.stringify(expected);
+
+          const testResult: TestResult = {
+            testCaseId: tc.id,
+            testCaseInput: tc.input,
+            testCaseOutput: tc.output,
+            actualOutput: result.output,
+            passed,
+          };
+
+          if (!passed) {
+            hasFailed = true;
+          }
+
+          testResults.push(testResult);
+
+          // Stop on first failure
+          if (hasFailed) {
+            console.log("Test case failed, stopping execution");
+            break;
+          }
+        } catch (error) {
+          const errorMessage = formatError(error);
+          console.error("Error executing test case:", errorMessage);
+
+          const testResult: TestResult = {
+            testCaseId: tc.id,
+            testCaseInput: tc.input,
+            testCaseOutput: tc.output,
+            actualOutput: "",
+            passed: false,
+            errorMessage,
+          };
+
+          testResults.push(testResult);
+          hasFailed = true;
+          break;
         }
       }
 
-      // All tests passed - update submission status
-      await prisma.submission.update({
-        where: {
-          id: submissionId,
-        },
-        data: {
-          status: "PASSED",
-        },
-      });
-      console.log("PASSED");
+      // Calculate average execution time
+      const averageExecutionTimeMs =
+        testResults.length > 0
+          ? Math.round(totalExecutionTimeMs / testResults.length)
+          : 0;
 
-      // If this is a contest submission, update the participant's score
-      if (submission.contestId && submission.submittedBy) {
-        await updateContestScore(
-          submission.contestId,
-          submission.submittedBy,
-          submission.problemId,
-        );
+      // Update submission with results
+      if (hasFailed) {
+        console.log("FAILED");
+        await prisma.submission.update({
+          where: {
+            id: submissionId,
+          },
+          data: {
+            status: "FAILED",
+            testResults: testResults,
+            executionTimeMs: averageExecutionTimeMs,
+            memoryUsedMb: maxMemoryUsedMb,
+          },
+        });
+      } else {
+        // All tests passed
+        console.log("PASSED");
+        await prisma.submission.update({
+          where: {
+            id: submissionId,
+          },
+          data: {
+            status: "PASSED",
+            executionTimeMs: averageExecutionTimeMs,
+            memoryUsedMb: maxMemoryUsedMb,
+          },
+        });
+
+        // If this is a contest submission, update the participant's score
+        if (submission.contestId && submission.submittedBy) {
+          await updateContestScore(
+            submission.contestId,
+            submission.submittedBy,
+            submission.problemId,
+          );
+        }
       }
     } catch (err) {
       console.error("Error processing submission:", err);
@@ -149,6 +209,108 @@ const worker = new Worker(
     concurrency: 5,
   },
 );
+
+/**
+ * Execute user code with test case input
+ */
+async function executeCode(
+  userCode: string,
+  input: string,
+  language: string,
+  isPython: boolean,
+): Promise<{ output: string }> {
+  const startMemory = process.memoryUsage().heapUsed / 1024 / 1024;
+
+  if (isPython) {
+    return executePythonCode(userCode, input);
+  } else {
+    return executeJavaScriptCode(userCode, input);
+  }
+}
+
+/**
+ * Execute JavaScript code
+ */
+async function executeJavaScriptCode(
+  userCode: string,
+  input: string,
+): Promise<{ output: string }> {
+  const wrapped = `${userCode}
+const fs = require("fs");
+const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
+const result = solve(...args);
+console.log(JSON.stringify(result));
+`;
+
+  return new Promise((resolve, reject) => {
+    const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" node:18 node -e '${wrapped.replace(/'/g, "'\\''")}'`;
+
+    const child = exec(
+      cmd,
+      {
+        timeout: 5000,
+      },
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(new Error(stderr || err.message));
+          return;
+        }
+        resolve({ output: stdout.trim() });
+      },
+    );
+
+    child.stdin?.write(input);
+    child.stdin?.end();
+  });
+}
+
+/**
+ * Execute Python code
+ */
+async function executePythonCode(
+  userCode: string,
+  input: string,
+): Promise<{ output: string }> {
+  const wrapped = `${userCode}
+import sys
+import json
+
+args = json.loads(input())
+result = solve(*args)
+print(json.dumps(result))
+`;
+
+  return new Promise((resolve, reject) => {
+    const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" python:3.11 python -c '${wrapped.replace(/'/g, "'\\''")}'`;
+
+    const child = exec(
+      cmd,
+      {
+        timeout: 5000,
+      },
+      (err, stdout, stderr) => {
+        if (err) {
+          reject(new Error(stderr || err.message));
+          return;
+        }
+        resolve({ output: stdout.trim() });
+      },
+    );
+
+    child.stdin?.write(input);
+    child.stdin?.end();
+  });
+}
+
+/**
+ * Format error message for display
+ */
+function formatError(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message;
+  }
+  return String(error);
+}
 
 /**
  * Update contest participant's score after a successful submission
@@ -217,3 +379,5 @@ async function updateContestScore(
     console.error("Error updating contest score:", err);
   }
 }
+
+console.log("Worker started and listening for submissions...");

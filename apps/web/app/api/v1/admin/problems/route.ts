@@ -22,6 +22,8 @@ type Payload = {
   constraints: ConstraintInput[];
   examples: ExampleInput[];
   testCases: TestCaseInput[];
+  starterCodeJavaScript: string;
+  starterCodePython: string;
 };
 
 export const POST = async (req: Request) => {
@@ -54,6 +56,8 @@ export const POST = async (req: Request) => {
         description: body.description,
         difficulty: body.difficulty,
         isPublic: true,
+        starterCodeJavaScript: body.starterCodeJavaScript,
+        starterCodePython: body.starterCodePython,
         constraints: {
           create: body.constraints.map((constraint) => ({
             description: constraint.description,
