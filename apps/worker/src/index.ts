@@ -1,6 +1,8 @@
 import { exec } from "child_process";
 import { prisma } from "@repo/database";
 import { Worker } from "bullmq";
+import { writeFileSync, unlinkSync } from "fs";
+import { randomBytes } from "crypto";
 
 interface TestResult {
   testCaseId: string;
@@ -301,6 +303,8 @@ async function executeJavaScriptCode(
   userCode: string,
   input: string,
 ): Promise<{ output: string }> {
+  console.log(`[Worker] ⚙️  executeJavaScriptCode called`);
+
   // Parse input: split by actual newlines and convert to JSON array
   const inputLines = input.split("\n").map((line) => {
     try {
@@ -312,33 +316,48 @@ async function executeJavaScriptCode(
 
   // Extract the actual function name from user code
   const functionName = extractFunctionNameJS(userCode);
+  console.log(`[Worker] 📝 Extracted function name: ${functionName}`);
 
   const jsonInput = JSON.stringify(inputLines);
+  console.log(`[Worker] 📥 Input lines: ${jsonInput}`);
 
-  const scriptContent = `${userCode}
-const fs = require("fs");
-const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
+  // Use ES modules syntax to avoid CommonJS require issues
+  // Import must be at the top of the module
+  const scriptContent = `import fs from "fs";
+
+${userCode}
+
+const stdinData = fs.readFileSync("/dev/stdin", "utf8");
+const args = JSON.parse(stdinData);
 const result = ${functionName}(...args);
 console.log(JSON.stringify(result));`;
 
+  console.log(
+    `[Worker] 📋 Script content length: ${scriptContent.length} chars`,
+  );
+
   return new Promise((resolve, reject) => {
     // Use a temporary file approach to avoid shell escaping issues
-    const { writeFileSync, unlinkSync } = require("fs");
-    const { randomBytes } = require("crypto");
-    const scriptPath = `/tmp/code_${randomBytes(8).toString("hex")}.js`;
+    const scriptPath = `/tmp/code_${randomBytes(8).toString("hex")}.mjs`;
 
     try {
       writeFileSync(scriptPath, scriptContent);
+      console.log(`[Worker] ✍️  Script written to: ${scriptPath}`);
 
       const cmd = `docker run --rm -i -v ${scriptPath}:${scriptPath} --memory="128m" --cpus="0.5" node:18 node ${scriptPath}`;
+      console.log(`[Worker] 🐳 Running Docker: ${cmd.substring(0, 100)}...`);
 
       const child = exec(
         cmd,
         {
           timeout: 5000,
           maxBuffer: 10 * 1024 * 1024,
+          shell: "/bin/bash",
         },
         (err, stdout, stderr) => {
+          console.log(`[Worker] 📤 Docker callback received`);
+
+          // Delete file after Docker container has exited
           try {
             unlinkSync(scriptPath);
           } catch (e) {
@@ -346,17 +365,22 @@ console.log(JSON.stringify(result));`;
           }
 
           if (err) {
+            console.error(`[Worker] ❌ Docker failed:`, stderr || err.message);
             reject(new Error(stderr || err.message));
             return;
           }
+          console.log(`[Worker] ✅ Docker succeeded:`, stdout.trim());
           resolve({ output: stdout.trim() });
         },
       );
 
       // Send parsed input as JSON array to stdin
+      console.log(`[Worker] 📨 Writing to stdin...`);
       child.stdin?.write(jsonInput);
       child.stdin?.end();
+      console.log(`[Worker] ✔️  stdin closed`);
     } catch (error) {
+      console.error(`[Worker] 💥 Exception in executeJavaScriptCode:`, error);
       reject(error);
     }
   });
@@ -416,8 +440,6 @@ print(json.dumps(result))
 
   return new Promise((resolve, reject) => {
     // Use a temporary file approach to avoid shell escaping issues
-    const { writeFileSync, unlinkSync } = require("fs");
-    const { randomBytes } = require("crypto");
     const scriptPath = `/tmp/code_${randomBytes(8).toString("hex")}.py`;
 
     try {
