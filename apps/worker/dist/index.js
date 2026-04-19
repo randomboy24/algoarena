@@ -2,16 +2,22 @@ import { exec } from "child_process";
 import { prisma } from "@repo/database";
 import { Worker } from "bullmq";
 const worker = new Worker("submission-queue", async (job) => {
-    console.log("worker hit");
-    if (!job.id) {
-        console.log("no job");
-        return;
+    console.log(`[Worker] Processing job ${job.id}`);
+    // Validate job data
+    if (!job || !job.id) {
+        console.error("[Worker] Invalid job object");
+        throw new Error("Job object is invalid");
+    }
+    if (!job.data || typeof job.data !== "object") {
+        console.error(`[Worker] Job ${job.id} has invalid data:`, job.data);
+        throw new Error("Job data is missing or invalid");
     }
     const submissionId = job.data.submissionId;
     if (!submissionId) {
-        console.log("no submission id");
-        return;
+        console.error(`[Worker] Job ${job.id} has no submissionId`);
+        throw new Error("submissionId is required in job data");
     }
+    console.log(`[Worker] Job ${job.id} - Processing submission: ${submissionId}`);
     try {
         const submission = await prisma.submission.findUnique({
             where: {
@@ -28,7 +34,9 @@ const worker = new Worker("submission-queue", async (job) => {
             },
         });
         if (!submission) {
-            return;
+            const errorMsg = `Submission ${submissionId} not found`;
+            console.error(`[Worker] ${errorMsg}`);
+            throw new Error(errorMsg);
         }
         // Fetch test cases based on submission type
         let testCases;
@@ -59,24 +67,21 @@ const worker = new Worker("submission-queue", async (job) => {
         }
         const userCode = submission.code;
         const language = submission.language;
-        console.log("testcases length: ", testCases.length);
-        console.log("language: ", language);
+        console.log(`[Worker] Submission ${submissionId}: language=${language}, testCases=${testCases.length}`);
         const testResults = [];
         let totalExecutionTimeMs = 0;
         let maxMemoryUsedMb = 0;
         let hasFailed = false;
         // Execute each test case
         for (const tc of testCases) {
-            console.log(`Running test case ${tc.id}`);
+            console.log(`[Worker] Running test case ${tc.id}`);
             try {
                 let startTime = Date.now();
                 const result = await executeCode(userCode, tc.input, language, submission.language === "PYTHON");
                 const endTime = Date.now();
                 const executionTimeMs = endTime - startTime;
                 totalExecutionTimeMs += executionTimeMs;
-                console.log("execution time (ms): ", executionTimeMs);
-                console.log("actual output: ", result.output);
-                console.log("expected output: ", tc.output);
+                console.log(`[Worker] Test ${tc.id}: ${executionTimeMs}ms - actual: ${result.output.substring(0, 50)}... expected: ${tc.output.substring(0, 50)}...`);
                 const actual = JSON.parse(result.output);
                 const expected = JSON.parse(tc.output);
                 const passed = JSON.stringify(actual) === JSON.stringify(expected);
@@ -93,7 +98,7 @@ const worker = new Worker("submission-queue", async (job) => {
                 testResults.push(testResult);
                 // Stop on first failure
                 if (hasFailed) {
-                    console.log("Test case failed, stopping execution");
+                    console.log(`[Worker] ❌ Test case ${tc.id} failed, stopping execution`);
                     break;
                 }
             }
@@ -119,7 +124,7 @@ const worker = new Worker("submission-queue", async (job) => {
             : 0;
         // Update submission with results
         if (hasFailed) {
-            console.log("FAILED");
+            console.log(`[Worker] ❌ Submission ${submissionId} FAILED: ${testResults.filter((r) => !r.passed).length}/${testResults.length} tests failed`);
             await prisma.submission.update({
                 where: {
                     id: submissionId,
@@ -134,7 +139,7 @@ const worker = new Worker("submission-queue", async (job) => {
         }
         else {
             // All tests passed
-            console.log("PASSED");
+            console.log(`[Worker] ✅ Submission ${submissionId} PASSED: All ${testResults.length} tests passed in ${averageExecutionTimeMs}ms`);
             await prisma.submission.update({
                 where: {
                     id: submissionId,
@@ -152,15 +157,24 @@ const worker = new Worker("submission-queue", async (job) => {
         }
     }
     catch (err) {
-        console.error("Error processing submission:", err);
-        await prisma.submission.update({
-            where: {
-                id: submissionId,
-            },
-            data: {
-                status: "FAILED",
-            },
-        });
+        const errorMessage = formatError(err);
+        console.error(`[Worker] ❌ Error processing submission ${submissionId}:`, errorMessage);
+        try {
+            await prisma.submission.update({
+                where: {
+                    id: submissionId,
+                },
+                data: {
+                    status: "FAILED",
+                },
+            });
+            console.log(`[Worker] Updated submission ${submissionId} status to FAILED`);
+        }
+        catch (dbErr) {
+            console.error(`[Worker] Failed to update submission status:`, formatError(dbErr));
+        }
+        // Re-throw the error so BullMQ can handle it properly
+        throw err;
     }
 }, {
     connection: {
@@ -366,4 +380,52 @@ async function updateContestScore(contestId, userId, problemId) {
     }
 }
 console.log("Worker started and listening for submissions...");
+// Worker event handlers for debugging and monitoring
+worker.on("ready", () => {
+    console.log("[Worker] ✅ Worker is ready and connected to Redis");
+});
+worker.on("active", (job) => {
+    console.log(`[Worker] 🔄 Job ${job.id} is now active (submissionId: ${job.data.submissionId})`);
+});
+worker.on("completed", (job, result) => {
+    console.log(`[Worker] ✅ Job ${job.id} completed successfully`);
+});
+worker.on("failed", (job, error) => {
+    console.error(`[Worker] ❌ Job ${job?.id} failed with error:`, error.message);
+    if (job?.data?.submissionId) {
+        console.error(`[Worker] Failed submission ID: ${job.data.submissionId}`);
+    }
+});
+worker.on("error", (error) => {
+    console.error("[Worker] ❌ Worker error:", error);
+});
+worker.on("closing", (msg) => {
+    console.warn(`[Worker] ⚠️  Worker closing: ${msg}`);
+});
+worker.on("closed", () => {
+    console.warn("[Worker] ⚠️  Worker connection closed");
+});
+worker.on("paused", () => {
+    console.warn("[Worker] ⚠️  Worker paused");
+});
+worker.on("resumed", () => {
+    console.log("[Worker] ✅ Worker resumed");
+});
+worker.on("drained", () => {
+    console.log("[Worker] 📭 Queue drained - all jobs processed");
+});
+worker.on("stalled", (jobId, prev) => {
+    console.warn(`[Worker] ⚠️  Job ${jobId} stalled (prev: ${prev})`);
+});
+// Graceful shutdown
+process.on("SIGTERM", async () => {
+    console.log("[Worker] Received SIGTERM, closing gracefully...");
+    await worker.close();
+    process.exit(0);
+});
+process.on("SIGINT", async () => {
+    console.log("[Worker] Received SIGINT, closing gracefully...");
+    await worker.close();
+    process.exit(0);
+});
 //# sourceMappingURL=index.js.map

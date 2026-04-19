@@ -522,16 +522,28 @@ worker.on("error", (error) => {
   console.error("[Worker] ❌ Worker error:", error);
 });
 
-worker.on("close", () => {
+worker.on("closing", (msg) => {
+  console.warn(`[Worker] ⚠️  Worker closing: ${msg}`);
+});
+
+worker.on("closed", () => {
   console.warn("[Worker] ⚠️  Worker connection closed");
 });
 
-worker.on("pause", () => {
+worker.on("paused", () => {
   console.warn("[Worker] ⚠️  Worker paused");
 });
 
-worker.on("resume", () => {
+worker.on("resumed", () => {
   console.log("[Worker] ✅ Worker resumed");
+});
+
+worker.on("drained", () => {
+  console.log("[Worker] 📭 Queue drained - all jobs processed");
+});
+
+worker.on("stalled", (jobId, prev) => {
+  console.warn(`[Worker] ⚠️  Job ${jobId} stalled (prev: ${prev})`);
 });
 
 // Graceful shutdown
