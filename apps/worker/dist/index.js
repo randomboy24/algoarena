@@ -234,26 +234,43 @@ async function executeJavaScriptCode(userCode, input) {
     });
     // Extract the actual function name from user code
     const functionName = extractFunctionNameJS(userCode);
-    const wrapped = `${userCode}
+    const jsonInput = JSON.stringify(inputLines);
+    const scriptContent = `${userCode}
 const fs = require("fs");
 const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
 const result = ${functionName}(...args);
-console.log(JSON.stringify(result));
-`;
+console.log(JSON.stringify(result));`;
     return new Promise((resolve, reject) => {
-        const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" node:18 node -e '${wrapped.replace(/'/g, "'\\''")}'`;
-        const child = exec(cmd, {
-            timeout: 5000,
-        }, (err, stdout, stderr) => {
-            if (err) {
-                reject(new Error(stderr || err.message));
-                return;
-            }
-            resolve({ output: stdout.trim() });
-        });
-        // Send parsed input as JSON array to stdin
-        child.stdin?.write(JSON.stringify(inputLines));
-        child.stdin?.end();
+        // Use a temporary file approach to avoid shell escaping issues
+        const { writeFileSync, unlinkSync } = require("fs");
+        const { randomBytes } = require("crypto");
+        const scriptPath = `/tmp/code_${randomBytes(8).toString("hex")}.js`;
+        try {
+            writeFileSync(scriptPath, scriptContent);
+            const cmd = `docker run --rm -i -v ${scriptPath}:${scriptPath} --memory="128m" --cpus="0.5" node:18 node ${scriptPath}`;
+            const child = exec(cmd, {
+                timeout: 5000,
+                maxBuffer: 10 * 1024 * 1024,
+            }, (err, stdout, stderr) => {
+                try {
+                    unlinkSync(scriptPath);
+                }
+                catch (e) {
+                    // Ignore file deletion errors
+                }
+                if (err) {
+                    reject(new Error(stderr || err.message));
+                    return;
+                }
+                resolve({ output: stdout.trim() });
+            });
+            // Send parsed input as JSON array to stdin
+            child.stdin?.write(jsonInput);
+            child.stdin?.end();
+        }
+        catch (error) {
+            reject(error);
+        }
     });
 }
 /**
@@ -290,7 +307,8 @@ async function executePythonCode(userCode, input) {
     });
     // Extract the actual function name from user code
     const functionName = extractFunctionNamePython(userCode);
-    const wrapped = `${userCode}
+    const jsonInput = JSON.stringify(inputLines);
+    const scriptContent = `${userCode}
 import sys
 import json
 
@@ -299,19 +317,36 @@ result = ${functionName}(*args)
 print(json.dumps(result))
 `;
     return new Promise((resolve, reject) => {
-        const cmd = `docker run --rm -i --memory="128m" --cpus="0.5" python:3.11 python -c '${wrapped.replace(/'/g, "'\\''")}'`;
-        const child = exec(cmd, {
-            timeout: 5000,
-        }, (err, stdout, stderr) => {
-            if (err) {
-                reject(new Error(stderr || err.message));
-                return;
-            }
-            resolve({ output: stdout.trim() });
-        });
-        // Send parsed input as JSON array to stdin
-        child.stdin?.write(JSON.stringify(inputLines));
-        child.stdin?.end();
+        // Use a temporary file approach to avoid shell escaping issues
+        const { writeFileSync, unlinkSync } = require("fs");
+        const { randomBytes } = require("crypto");
+        const scriptPath = `/tmp/code_${randomBytes(8).toString("hex")}.py`;
+        try {
+            writeFileSync(scriptPath, scriptContent);
+            const cmd = `docker run --rm -i -v ${scriptPath}:${scriptPath} --memory="128m" --cpus="0.5" python:3.11 python ${scriptPath}`;
+            const child = exec(cmd, {
+                timeout: 5000,
+                maxBuffer: 10 * 1024 * 1024,
+            }, (err, stdout, stderr) => {
+                try {
+                    unlinkSync(scriptPath);
+                }
+                catch (e) {
+                    // Ignore file deletion errors
+                }
+                if (err) {
+                    reject(new Error(stderr || err.message));
+                    return;
+                }
+                resolve({ output: stdout.trim() });
+            });
+            // Send parsed input as JSON array to stdin
+            child.stdin?.write(jsonInput);
+            child.stdin?.end();
+        }
+        catch (error) {
+            reject(error);
+        }
     });
 }
 /**
