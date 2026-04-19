@@ -23,7 +23,7 @@ export const Navbar = async () => {
           {/* Navigation Links - Optional: Add if you have other pages */}
           <div className="hidden md:flex items-center gap-6">
             <a
-              href="/problems"
+              href="/"
               className="text-sm text-[#9CA3AF] hover:text-white transition-colors duration-200"
             >
               Problems
