@@ -229,14 +229,40 @@ async function executeCode(
 }
 
 /**
+ * Extract function name from JavaScript code
+ * Supports: function name() {}, const name = (), etc.
+ */
+function extractFunctionNameJS(code: string): string {
+  // Try to match: function functionName or const/let/var functionName =
+  const patterns = [
+    /function\s+(\w+)\s*\(/, // function twoSum() {}
+    /const\s+(\w+)\s*=\s*\(/, // const twoSum = () => {}
+    /let\s+(\w+)\s*=\s*\(/, // let twoSum = () => {}
+    /var\s+(\w+)\s*=\s*\(/, // var twoSum = () => {}
+    /export\s+function\s+(\w+)/, // export function twoSum() {}
+    /exports\.(\w+)\s*=\s*function/, // exports.twoSum = function() {}
+  ];
+
+  for (const pattern of patterns) {
+    const match = code.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  // Default fallback
+  return "solve";
+}
+
+/**
  * Execute JavaScript code
  */
 async function executeJavaScriptCode(
   userCode: string,
   input: string,
 ): Promise<{ output: string }> {
-  // Parse input: split by \n and convert to JSON array
-  const inputLines = input.split("\\n").map((line) => {
+  // Parse input: split by actual newlines and convert to JSON array
+  const inputLines = input.split("\n").map((line) => {
     try {
       return JSON.parse(line);
     } catch {
@@ -244,10 +270,13 @@ async function executeJavaScriptCode(
     }
   });
 
+  // Extract the actual function name from user code
+  const functionName = extractFunctionNameJS(userCode);
+
   const wrapped = `${userCode}
 const fs = require("fs");
 const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
-const result = solve(...args);
+const result = ${functionName}(...args);
 console.log(JSON.stringify(result));
 `;
 
@@ -275,14 +304,36 @@ console.log(JSON.stringify(result));
 }
 
 /**
+ * Extract function name from Python code
+ * Supports: def functionName():, functionName = lambda, etc.
+ */
+function extractFunctionNamePython(code: string): string {
+  // Try to match: def functionName or functionName = lambda
+  const patterns = [
+    /def\s+(\w+)\s*\(/, // def twoSum():
+    /(\w+)\s*=\s*lambda/, // twoSum = lambda
+  ];
+
+  for (const pattern of patterns) {
+    const match = code.match(pattern);
+    if (match && match[1]) {
+      return match[1];
+    }
+  }
+
+  // Default fallback
+  return "solve";
+}
+
+/**
  * Execute Python code
  */
 async function executePythonCode(
   userCode: string,
   input: string,
 ): Promise<{ output: string }> {
-  // Parse input: split by \n and convert to JSON array
-  const inputLines = input.split("\\n").map((line) => {
+  // Parse input: split by actual newlines and convert to JSON array
+  const inputLines = input.split("\n").map((line) => {
     try {
       return JSON.parse(line);
     } catch {
@@ -290,12 +341,15 @@ async function executePythonCode(
     }
   });
 
+  // Extract the actual function name from user code
+  const functionName = extractFunctionNamePython(userCode);
+
   const wrapped = `${userCode}
 import sys
 import json
 
 args = json.loads(input())
-result = solve(*args)
+result = ${functionName}(*args)
 print(json.dumps(result))
 `;
 
