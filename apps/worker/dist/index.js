@@ -186,6 +186,15 @@ async function executeCode(userCode, input, language, isPython) {
  * Execute JavaScript code
  */
 async function executeJavaScriptCode(userCode, input) {
+    // Parse input: split by \n and convert to JSON array
+    const inputLines = input.split("\\n").map((line) => {
+        try {
+            return JSON.parse(line);
+        }
+        catch {
+            return line; // If not JSON, return as string
+        }
+    });
     const wrapped = `${userCode}
 const fs = require("fs");
 const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
@@ -203,7 +212,8 @@ console.log(JSON.stringify(result));
             }
             resolve({ output: stdout.trim() });
         });
-        child.stdin?.write(input);
+        // Send parsed input as JSON array to stdin
+        child.stdin?.write(JSON.stringify(inputLines));
         child.stdin?.end();
     });
 }
@@ -211,6 +221,15 @@ console.log(JSON.stringify(result));
  * Execute Python code
  */
 async function executePythonCode(userCode, input) {
+    // Parse input: split by \n and convert to JSON array
+    const inputLines = input.split("\\n").map((line) => {
+        try {
+            return JSON.parse(line);
+        }
+        catch {
+            return line; // If not JSON, return as string
+        }
+    });
     const wrapped = `${userCode}
 import sys
 import json
@@ -230,7 +249,8 @@ print(json.dumps(result))
             }
             resolve({ output: stdout.trim() });
         });
-        child.stdin?.write(input);
+        // Send parsed input as JSON array to stdin
+        child.stdin?.write(JSON.stringify(inputLines));
         child.stdin?.end();
     });
 }
