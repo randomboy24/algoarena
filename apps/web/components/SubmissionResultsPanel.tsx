@@ -1,5 +1,7 @@
 "use client";
 
+import { formatInputForDisplay } from "../lib/formatInput";
+
 interface TestResult {
   testCaseId: string;
   testCaseInput: string;
@@ -136,21 +138,25 @@ export default function SubmissionResultsPanel({
                   <td className="px-4 py-3 text-[#94A3B8] font-medium">
                     TC {index + 1}
                   </td>
-                  <td className="px-4 py-3 text-[#E2E8F0] font-mono max-w-xs truncate">
-                    {testResult.testCaseInput}
+                  <td className="px-4 py-3 text-[#E2E8F0] font-mono max-w-xs">
+                    <pre className="whitespace-pre-wrap break-words">
+                      {formatInputForDisplay(testResult.testCaseInput)}
+                    </pre>
                   </td>
-                  <td className="px-4 py-3 text-[#E2E8F0] font-mono max-w-xs truncate">
-                    {testResult.testCaseOutput}
+                  <td className="px-4 py-3 text-[#E2E8F0] font-mono max-w-xs">
+                    <pre className="whitespace-pre-wrap break-words">
+                      {formatInputForDisplay(testResult.testCaseOutput)}
+                    </pre>
                   </td>
-                  <td className="px-4 py-3 font-mono max-w-xs truncate">
+                  <td className="px-4 py-3 font-mono max-w-xs">
                     {testResult.errorMessage ? (
                       <span className="text-rose-300">
                         {testResult.errorMessage}
                       </span>
                     ) : (
-                      <span className="text-[#E2E8F0]">
-                        {testResult.actualOutput}
-                      </span>
+                      <pre className="text-[#E2E8F0] whitespace-pre-wrap break-words">
+                        {formatInputForDisplay(testResult.actualOutput)}
+                      </pre>
                     )}
                   </td>
                   <td className="px-4 py-3">

@@ -2,6 +2,7 @@
 
 import { CheckCircle, AlertCircle, BarChart3 } from "lucide-react";
 import { useState } from "react";
+import { formatInputForDisplay } from "../lib/formatInput";
 
 const difficultyConfig = {
   EASY: {
@@ -35,7 +36,7 @@ interface ProblemPanelProps {
       explanation?: string;
     }>;
     constraints: {
-        description: string
+      description: string;
     }[];
   };
 }
@@ -114,17 +115,17 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
                       <span className="text-xs font-medium text-[#6B7280] block mb-1">
                         Input:
                       </span>
-                      <code className="text-sm text-[#A78BFA] bg-[#0A1929] px-3 py-2 rounded-lg block border border-[#374151]">
-                        {example.input}
-                      </code>
+                      <pre className="text-sm text-[#A78BFA] bg-[#0A1929] px-3 py-2 rounded-lg block border border-[#374151] overflow-x-auto whitespace-pre-wrap break-words">
+                        {formatInputForDisplay(example.input)}
+                      </pre>
                     </div>
                     <div>
                       <span className="text-xs font-medium text-[#6B7280] block mb-1">
                         Output:
                       </span>
-                      <code className="text-sm text-[#FCD34D] bg-[#0A1929] px-3 py-2 rounded-lg block border border-[#374151]">
-                        {example.output}
-                      </code>
+                      <pre className="text-sm text-[#FCD34D] bg-[#0A1929] px-3 py-2 rounded-lg block border border-[#374151] overflow-x-auto whitespace-pre-wrap break-words">
+                        {formatInputForDisplay(example.output)}
+                      </pre>
                     </div>
                     {example.explanation && (
                       <div>
@@ -150,7 +151,9 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
                 {problem.constraints.map((constraint, idx) => (
                   <li key={idx} className="flex items-start gap-2 text-sm">
                     <span className="text-[#3B82F6] mt-1">•</span>
-                    <code className="text-[#9CA3AF]">{constraint.description}</code>
+                    <code className="text-[#9CA3AF]">
+                      {constraint.description}
+                    </code>
                   </li>
                 ))}
               </ul>

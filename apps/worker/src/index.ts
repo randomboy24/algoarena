@@ -235,6 +235,15 @@ async function executeJavaScriptCode(
   userCode: string,
   input: string,
 ): Promise<{ output: string }> {
+  // Parse input: split by \n and convert to JSON array
+  const inputLines = input.split("\\n").map((line) => {
+    try {
+      return JSON.parse(line);
+    } catch {
+      return line; // If not JSON, return as string
+    }
+  });
+
   const wrapped = `${userCode}
 const fs = require("fs");
 const args = JSON.parse(fs.readFileSync("/dev/stdin", "utf8"));
@@ -259,7 +268,8 @@ console.log(JSON.stringify(result));
       },
     );
 
-    child.stdin?.write(input);
+    // Send parsed input as JSON array to stdin
+    child.stdin?.write(JSON.stringify(inputLines));
     child.stdin?.end();
   });
 }
@@ -271,6 +281,15 @@ async function executePythonCode(
   userCode: string,
   input: string,
 ): Promise<{ output: string }> {
+  // Parse input: split by \n and convert to JSON array
+  const inputLines = input.split("\\n").map((line) => {
+    try {
+      return JSON.parse(line);
+    } catch {
+      return line; // If not JSON, return as string
+    }
+  });
+
   const wrapped = `${userCode}
 import sys
 import json
@@ -297,7 +316,8 @@ print(json.dumps(result))
       },
     );
 
-    child.stdin?.write(input);
+    // Send parsed input as JSON array to stdin
+    child.stdin?.write(JSON.stringify(inputLines));
     child.stdin?.end();
   });
 }
