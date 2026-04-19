@@ -40,7 +40,6 @@ export function ProblemCard({ problem, acceptance }: ProblemCardProps) {
   const difficultyColor = difficultyConfig[problem.difficulty].color;
 
   const handleClick = () => {
-    console.log(problem.id);
     router.push(`/problems/${problem.slug}`);
   };
 

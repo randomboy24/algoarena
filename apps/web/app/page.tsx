@@ -25,6 +25,13 @@ export default async function IndexPage() {
     where: {
       isPublic: true,
     },
+    select: {
+      id: true,
+      title: true,
+      slug: true,
+      description: true,
+      difficulty: true,
+    },
   });
 
   // console.log(problem);
