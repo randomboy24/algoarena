@@ -160,7 +160,7 @@ const worker = new Worker(
           },
           data: {
             status: "FAILED",
-            testResults: testResults,
+            testResults: testResults as any,
             executionTimeMs: averageExecutionTimeMs,
             memoryUsedMb: maxMemoryUsedMb,
           },
