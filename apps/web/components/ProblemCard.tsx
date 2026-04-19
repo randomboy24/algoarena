@@ -26,6 +26,7 @@ interface ProblemCardProps {
   problem: {
     id: string;
     title: string;
+    slug: string;
     description: string;
     difficulty: "EASY" | "MEDIUM" | "HARD";
     submissionCount: number;
@@ -40,7 +41,7 @@ export function ProblemCard({ problem, acceptance }: ProblemCardProps) {
 
   const handleClick = () => {
     console.log(problem.id);
-    router.push(`/problems/${problem.title}`);
+    router.push(`/problems/${problem.slug}`);
   };
 
   return (

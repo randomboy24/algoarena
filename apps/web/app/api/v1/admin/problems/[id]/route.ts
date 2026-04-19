@@ -1,6 +1,14 @@
 import { prisma } from "@repo/database";
 import { NextResponse } from "next/server";
 
+// Helper function to generate slug from title
+function generateSlug(title: string): string {
+  return title
+    .toLowerCase()
+    .replace(/\s+/g, "-")
+    .replace(/[^\w-]/g, "");
+}
+
 type ConstraintInput = { id?: string; description: string };
 type ExampleInput = {
   id?: string;
@@ -48,6 +56,7 @@ export const PUT = async (
       where: { id },
       data: {
         title: body.title,
+        slug: generateSlug(body.title),
         description: body.description,
         difficulty: body.difficulty,
         starterCodeJavaScript: body.starterCodeJavaScript,

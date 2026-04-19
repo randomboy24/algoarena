@@ -5,6 +5,7 @@ export default async function Page() {
     select: {
       id: true,
       title: true,
+      slug: true,
       difficulty: true,
     },
   });
@@ -51,7 +52,7 @@ export default async function Page() {
           {problems.map((problem) => (
             <a
               key={problem.id}
-              href={`/admin/problems/${encodeURIComponent(problem.title)}`}
+              href={`/admin/problems/${problem.slug}`}
               className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#1E2A3A] hover:bg-[#0B1B2D] transition-colors"
             >
               <div className="col-span-7">
