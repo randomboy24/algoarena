@@ -155,10 +155,7 @@ export function ProblemsList({ problems }: ProblemsListProps) {
         <div className="bg-[#1E2A3A] rounded-xl border border-[#374151] overflow-hidden shadow-[0_4px_6px_-1px_rgba(0,0,0,0.1)]">
           {/* Table Header */}
           <div className="grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#374151] bg-[#0A1929]/50">
-            <div className="col-span-1 text-sm font-medium text-[#9CA3AF]">
-              Status
-            </div>
-            <div className="col-span-5 text-sm font-medium text-[#9CA3AF]">
+            <div className="col-span-6 text-sm font-medium text-[#9CA3AF]">
               Title
             </div>
             <div className="col-span-2 text-sm font-medium text-[#9CA3AF]">

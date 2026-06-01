@@ -48,13 +48,8 @@ export function ProblemCard({ problem, acceptance }: ProblemCardProps) {
       onClick={handleClick}
       className="group grid grid-cols-12 gap-4 px-6 py-4 border-b border-[#374151] last:border-0 hover:bg-[#374151]/30 transition-all duration-200 cursor-pointer"
     >
-      {/* Status */}
-      <div className="col-span-1 flex items-center">
-        <div className="w-5 h-5 rounded-full border-2 border-[#374151] group-hover:border-[#3B82F6] transition-colors duration-200" />
-      </div>
-
       {/* Title and Description */}
-      <div className="col-span-5">
+      <div className="col-span-6">
         <h3 className="text-white font-medium group-hover:text-[#3B82F6] transition-colors duration-200">
           {problem.title}
         </h3>
