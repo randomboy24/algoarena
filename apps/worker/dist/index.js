@@ -124,9 +124,11 @@ const worker = new Worker("submission-queue", async (job) => {
         const averageExecutionTimeMs = testResults.length > 0
             ? Math.round(totalExecutionTimeMs / testResults.length)
             : 0;
+        const passedTestCount = testResults.filter((r) => r.passed).length;
+        const totalTestCount = testCases.length;
         // Update submission with results
         if (hasFailed) {
-            console.log(`[Worker] ❌ Submission ${submissionId} FAILED: ${testResults.filter((r) => !r.passed).length}/${testResults.length} tests failed`);
+            console.log(`[Worker] ❌ Submission ${submissionId} FAILED: ${passedTestCount}/${totalTestCount} tests passed`);
             await prisma.submission.update({
                 where: {
                     id: submissionId,
@@ -136,20 +138,25 @@ const worker = new Worker("submission-queue", async (job) => {
                     testResults: testResults,
                     executionTimeMs: averageExecutionTimeMs,
                     memoryUsedMb: maxMemoryUsedMb,
+                    passedTestCount,
+                    totalTestCount,
                 },
             });
         }
         else {
             // All tests passed
-            console.log(`[Worker] ✅ Submission ${submissionId} PASSED: All ${testResults.length} tests passed in ${averageExecutionTimeMs}ms`);
+            console.log(`[Worker] ✅ Submission ${submissionId} PASSED: All ${totalTestCount} tests passed in ${averageExecutionTimeMs}ms`);
             await prisma.submission.update({
                 where: {
                     id: submissionId,
                 },
                 data: {
                     status: "PASSED",
+                    testResults: testResults,
                     executionTimeMs: averageExecutionTimeMs,
                     memoryUsedMb: maxMemoryUsedMb,
+                    passedTestCount,
+                    totalTestCount,
                 },
             });
             // If this is a contest submission, update the participant's score

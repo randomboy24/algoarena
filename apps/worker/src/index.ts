@@ -171,10 +171,13 @@ const worker = new Worker(
           ? Math.round(totalExecutionTimeMs / testResults.length)
           : 0;
 
+      const passedTestCount = testResults.filter((r) => r.passed).length;
+      const totalTestCount = testCases.length;
+
       // Update submission with results
       if (hasFailed) {
         console.log(
-          `[Worker] ❌ Submission ${submissionId} FAILED: ${testResults.filter((r) => !r.passed).length}/${testResults.length} tests failed`,
+          `[Worker] ❌ Submission ${submissionId} FAILED: ${passedTestCount}/${totalTestCount} tests passed`,
         );
         await prisma.submission.update({
           where: {
@@ -185,12 +188,14 @@ const worker = new Worker(
             testResults: testResults as any,
             executionTimeMs: averageExecutionTimeMs,
             memoryUsedMb: maxMemoryUsedMb,
+            passedTestCount,
+            totalTestCount,
           },
         });
       } else {
         // All tests passed
         console.log(
-          `[Worker] ✅ Submission ${submissionId} PASSED: All ${testResults.length} tests passed in ${averageExecutionTimeMs}ms`,
+          `[Worker] ✅ Submission ${submissionId} PASSED: All ${totalTestCount} tests passed in ${averageExecutionTimeMs}ms`,
         );
         await prisma.submission.update({
           where: {
@@ -198,8 +203,11 @@ const worker = new Worker(
           },
           data: {
             status: "PASSED",
+            testResults: testResults as any,
             executionTimeMs: averageExecutionTimeMs,
             memoryUsedMb: maxMemoryUsedMb,
+            passedTestCount,
+            totalTestCount,
           },
         });
 
