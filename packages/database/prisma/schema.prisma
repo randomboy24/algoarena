@@ -39,21 +39,23 @@ model Problem {
 }
 
 model Submission {
-  id                String         @id @default(cuid())
-  problemId         String
-  submittedBy       String
-  language          LANGUAGES
-  code              String
-  status            STATUS
-  type              SUBMISSIONTYPE @default(RUN)
-  createdAt         DateTime       @default(now())
-  contestId         String?
-  testResults       Json?
-  executionTimeMs   Int?
-  memoryUsedMb      Float?
-  user              User           @relation(fields: [submittedBy], references: [id])
-  problem           Problem        @relation(fields: [problemId], references: [id])
-  contest           Contest?       @relation(fields: [contestId], references: [id])
+  id              String         @id @default(cuid())
+  problemId       String
+  submittedBy     String
+  language        LANGUAGES
+  code            String
+  status          STATUS
+  type            SUBMISSIONTYPE @default(RUN)
+  createdAt       DateTime       @default(now())
+  contestId       String?
+  testResults     Json?
+  executionTimeMs Int?
+  memoryUsedMb    Float?
+  passedTestCount Int?
+  totalTestCount  Int?
+  user            User           @relation(fields: [submittedBy], references: [id])
+  problem         Problem        @relation(fields: [problemId], references: [id])
+  contest         Contest?       @relation(fields: [contestId], references: [id])
 }
 
 model TestCase {
