@@ -5,6 +5,7 @@ import { auth } from "@clerk/nextjs/server";
 
 export const POST = async (req: Request) => {
   const { code, language, problemId, contestId, type } = await req.json();
+  const submissionType = type || "RUN";
 
   // Get authenticated user
   const { userId } = await auth();
@@ -16,6 +17,17 @@ export const POST = async (req: Request) => {
   if (!code || !language || !problemId) {
     return NextResponse.json(
       { error: "Missing required fields" },
+      { status: 400 },
+    );
+  }
+
+  if (!["JAVASCRIPT", "PYTHON"].includes(language)) {
+    return NextResponse.json({ error: "Invalid language" }, { status: 400 });
+  }
+
+  if (!["RUN", "SUBMIT"].includes(submissionType)) {
+    return NextResponse.json(
+      { error: "Invalid submission type" },
       { status: 400 },
     );
   }
@@ -82,7 +94,7 @@ export const POST = async (req: Request) => {
         code: code,
         language: language,
         status: "PENDING",
-        type: type || "RUN",
+        type: submissionType,
         problemId: problemId,
         submittedBy: userId,
         contestId: contestId || null,
@@ -91,7 +103,7 @@ export const POST = async (req: Request) => {
 
     console.log("successful submission added to the db");
 
-    const job = await queue.add("execute", {
+    await queue.add("execute", {
       submissionId: submission.id,
     });
 
