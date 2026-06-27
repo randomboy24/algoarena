@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Editor from "@monaco-editor/react";
 import { Loader2, Play, RotateCcw, Send } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
@@ -15,16 +15,30 @@ interface CodeEditorProps {
 }
 
 interface SubmissionResult {
+  id?: string;
   status: "PASSED" | "FAILED";
   type: "RUN" | "SUBMIT";
+  language?: "JAVASCRIPT" | "PYTHON";
+  createdAt?: string;
+  code?: string;
+  user?: {
+    id: string;
+    firstName: string | null;
+    lastName: string | null;
+  } | null;
   testResults?: Array<{
     testCaseId: string;
-    testCaseInput: string;
-    testCaseOutput: string;
-    actualOutput: string;
+    testCaseNumber?: number;
+    testCaseInput?: string;
+    testCaseOutput?: string;
+    actualOutput?: string;
     passed: boolean;
     errorMessage?: string;
+    detailsHidden?: boolean;
   }>;
+  passedTestCount?: number;
+  totalTestCount?: number;
+  failedTestCount?: number;
   executionTimeMs?: number;
   memoryUsedMb?: number;
 }
@@ -43,7 +57,6 @@ export function CodeEditor({
   const [isRunning, setIsRunning] = useState(false);
   const [submissionResult, setSubmissionResult] =
     useState<SubmissionResult | null>(null);
-  const [submissionType, setSubmissionType] = useState<"RUN" | "SUBMIT">("RUN");
   const { userId, isLoaded } = useAuth();
 
   // Update code when language changes - auto-swap to starter code
@@ -70,56 +83,74 @@ export function CodeEditor({
 
     setIsRunning(true);
     setSubmissionResult(null);
-    setSubmissionType(type);
 
     try {
-      // Convert language to uppercase for API
       const languageEnum = language === "javascript" ? "JAVASCRIPT" : "PYTHON";
 
-      const response = await fetch("http://localhost:3000/api/v1/submissions", {
+      const response = await fetch("/api/v1/submissions", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          code: code,
+          code,
           language: languageEnum,
-          problemId: problemId,
-          submittedBy: userId,
-          contestId: contestId,
-          type: type,
+          problemId,
+          contestId,
+          type,
         }),
       });
 
       const jsonResponse = await response.json();
-      console.log(jsonResponse);
+
+      if (!response.ok || !jsonResponse.submissionId) {
+        throw new Error(jsonResponse.error || "Failed to create submission");
+      }
+
       const submissionId = jsonResponse.submissionId;
 
-      // Poll for results
       const interval = setInterval(async () => {
-        const res = await fetch(
-          `http://localhost:3000/api/v1/submissions/${submissionId}`,
-          {
+        try {
+          const res = await fetch("/api/v1/submissions/" + submissionId, {
             method: "GET",
-          },
-        );
+          });
+          const data = await res.json();
 
-        const data = await res.json();
+          if (!res.ok) {
+            throw new Error(
+              data.error || data.message || "Failed to fetch result",
+            );
+          }
 
-        console.log("status: ", data.status);
-        console.log(data);
-
-        if (data.status === "PASSED" || data.status === "FAILED") {
+          if (data.status === "PASSED" || data.status === "FAILED") {
+            clearInterval(interval);
+            setIsRunning(false);
+            setSubmissionResult({
+              id: data.id,
+              status: data.status,
+              type: data.type || type,
+              language: data.language,
+              createdAt: data.createdAt,
+              code: data.code,
+              user: data.user,
+              testResults: data.testResults,
+              passedTestCount: data.passedTestCount,
+              totalTestCount: data.totalTestCount,
+              failedTestCount: data.failedTestCount,
+              executionTimeMs: data.executionTimeMs,
+              memoryUsedMb: data.memoryUsedMb,
+            });
+          }
+        } catch (error) {
           clearInterval(interval);
           setIsRunning(false);
+          console.error(error);
           setSubmissionResult({
-            status: data.status,
-            type: data.type || type,
-            testResults: data.testResults,
-            executionTimeMs: data.executionTimeMs,
-            memoryUsedMb: data.memoryUsedMb,
+            status: "FAILED",
+            type,
+            language: languageEnum,
+            code,
           });
-          console.log("final result: ", data);
         }
       }, 2000);
     } catch (error) {
@@ -127,18 +158,18 @@ export function CodeEditor({
       setIsRunning(false);
       setSubmissionResult({
         status: "FAILED",
-        type: type,
+        type,
+        language: language === "javascript" ? "JAVASCRIPT" : "PYTHON",
+        code,
       });
     }
   }
 
   const handleRun = () => {
-    console.log("Running code:", code);
     submitCode({ type: "RUN", code });
   };
 
   const handleSubmit = () => {
-    console.log("Submitting code:", code);
     submitCode({ type: "SUBMIT", code });
   };
 
@@ -154,7 +185,7 @@ export function CodeEditor({
     <div className="h-full flex flex-col bg-[#1E2A3A]">
       {submissionResult && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-          <div className="w-[90%] max-w-2xl max-h-[80vh] rounded-xl border border-[#374151] bg-[#0A1929] p-6 text-white shadow-xl overflow-auto">
+          <div className="w-[94%] max-w-5xl max-h-[86vh] rounded-xl border border-[#374151] bg-[#0A1929] p-6 text-white shadow-xl overflow-auto">
             <div className="flex items-start justify-between gap-4 mb-4">
               <div>
                 <h2 className="text-lg font-semibold">
