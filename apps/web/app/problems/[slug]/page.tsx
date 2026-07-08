@@ -165,7 +165,7 @@ export default async function ProblemPage({ params }: PageProps) {
   }
 
   return (
-    <main className="h-screen bg-[#0A1929] overflow-hidden">
+    <main className="h-[calc(100vh-64px)] bg-[#0A1929] overflow-hidden">
       <ResizableLayout
         leftPanel={<ProblemPanel problem={problem as any} />}
         rightPanel={problem}

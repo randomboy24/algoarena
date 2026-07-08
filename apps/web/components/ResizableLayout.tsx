@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { GripVertical, GripHorizontal } from "lucide-react";
+import { GripVertical, GripHorizontal, Maximize2 } from "lucide-react";
 import { CodeEditor } from "./CodeEditor";
 import { TestCases } from "./TestCases";
 
@@ -13,6 +13,11 @@ export function ResizableLayout({ leftPanel, rightPanel, contestId }: any) {
   const rightRef = useRef<HTMLDivElement>(null);
 
   const dragging = useRef<"h" | "v" | null>(null);
+
+  const resetLayout = () => {
+    setHSplit(40);
+    setVSplit(60);
+  };
 
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -41,7 +46,7 @@ export function ResizableLayout({ leftPanel, rightPanel, contestId }: any) {
   }, []);
 
   return (
-    <div ref={containerRef} className="flex h-full select-none">
+    <div ref={containerRef} className="flex h-full w-full select-none">
       {/* LEFT */}
       <div
         style={{ width: `${hSplit}%`, minWidth: 0 }}
@@ -59,6 +64,16 @@ export function ResizableLayout({ leftPanel, rightPanel, contestId }: any) {
         }}
       >
         <GripVertical className="w-4 h-4 text-white absolute inset-0 m-auto opacity-0 group-hover:opacity-100" />
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            resetLayout();
+          }}
+          className="absolute top-2 left-1/2 -translate-x-1/2 p-1.5 bg-[#0A1929] rounded-lg border border-[#374151] hover:border-[#3B82F6] opacity-0 group-hover:opacity-100 transition-opacity"
+          title="Reset layout"
+        >
+          <Maximize2 className="w-3 h-3 text-[#9CA3AF]" />
+        </button>
       </div>
 
       {/* RIGHT */}

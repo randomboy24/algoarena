@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, AlertCircle, BarChart3 } from "lucide-react";
+import { CheckCircle, AlertCircle, BarChart3, Lightbulb } from "lucide-react";
 import { useState } from "react";
 import { formatInputForDisplay } from "../lib/formatInput";
 
@@ -51,10 +51,10 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
     <div className="h-full bg-[#0A1929] border-r border-[#1E2A3A] flex flex-col">
       {/* Sticky Header */}
       <div className="sticky top-0 bg-[#0A1929] border-b border-[#1E2A3A] px-6 py-4 z-10">
-        <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center justify-between mb-3">
           <h1 className="text-xl font-semibold text-white">{problem.title}</h1>
           <div
-            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${Difficulty.color}`}
+            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-medium ${Difficulty.color} border ${Difficulty.borderColor}`}
           >
             <Difficulty.icon className="w-3.5 h-3.5" />
             {Difficulty.label}
@@ -62,10 +62,10 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
         </div>
 
         {/* Tabs */}
-        <div className="flex gap-4">
+        <div className="flex gap-6">
           <button
             onClick={() => setActiveTab("description")}
-            className={`text-sm pb-2 border-b-2 transition-colors ${
+            className={`text-sm pb-2 border-b-2 transition-colors font-medium ${
               activeTab === "description"
                 ? "text-[#3B82F6] border-[#3B82F6]"
                 : "text-[#6B7280] border-transparent hover:text-[#9CA3AF]"
@@ -75,7 +75,7 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
           </button>
           <button
             onClick={() => setActiveTab("solution")}
-            className={`text-sm pb-2 border-b-2 transition-colors ${
+            className={`text-sm pb-2 border-b-2 transition-colors font-medium ${
               activeTab === "solution"
                 ? "text-[#3B82F6] border-[#3B82F6]"
                 : "text-[#6B7280] border-transparent hover:text-[#9CA3AF]"
@@ -143,7 +143,7 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
             </div>
 
             {/* Constraints */}
-            <div className="mt-6">
+            <div className="mt-6 mb-4">
               <h3 className="text-sm font-medium text-white mb-3">
                 Constraints:
               </h3>
@@ -161,7 +161,17 @@ export function ProblemPanel({ problem }: ProblemPanelProps) {
           </div>
         ) : (
           <div className="px-6 py-4">
-            <p className="text-[#9CA3AF]">Solutions will be displayed here.</p>
+            <div className="flex flex-col items-center justify-center h-full text-center space-y-4">
+              <div className="w-16 h-16 rounded-full bg-[#1E2A3A] flex items-center justify-center">
+                <Lightbulb className="w-8 h-8 text-[#3B82F6]" />
+              </div>
+              <div>
+                <h3 className="text-white font-medium mb-2">Solution Coming Soon</h3>
+                <p className="text-[#9CA3AF] text-sm">
+                  Community solutions and editorial will be available here after the problem is solved by multiple users.
+                </p>
+              </div>
+            </div>
           </div>
         )}
       </div>

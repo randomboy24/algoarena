@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import Editor from "@monaco-editor/react";
-import { Loader2, Play, RotateCcw, Send } from "lucide-react";
+import { Loader2, Play, RotateCcw, Send, Keyboard } from "lucide-react";
 import { useAuth } from "@clerk/nextjs";
 import SubmissionResultsPanel from "./SubmissionResultsPanel";
 
@@ -181,6 +181,33 @@ export function CodeEditor({
     }
   };
 
+  // Keyboard shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ctrl+Enter or Cmd+Enter to run
+      if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+        e.preventDefault();
+        if (!isRunning) {
+          handleRun();
+        }
+      }
+      // Ctrl+Shift+Enter or Cmd+Shift+Enter to submit
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "Enter") {
+        e.preventDefault();
+        if (!isRunning) {
+          handleSubmit();
+        }
+      }
+      // Escape to close modal
+      if (e.key === "Escape" && submissionResult) {
+        setSubmissionResult(null);
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [isRunning, submissionResult]);
+
   return (
     <div className="h-full flex flex-col bg-[#1E2A3A]">
       {submissionResult && (
@@ -240,6 +267,13 @@ export function CodeEditor({
             <option value="javascript">JavaScript</option>
             <option value="python">Python</option>
           </select>
+          <div className="hidden sm:flex items-center gap-1 text-xs text-[#6B7280] ml-2">
+            <Keyboard className="w-3 h-3" />
+            <span className="text-[10px] bg-[#0A1929] px-1.5 py-0.5 rounded border border-[#374151]">Ctrl</span>
+            <span>+</span>
+            <span className="text-[10px] bg-[#0A1929] px-1.5 py-0.5 rounded border border-[#374151]">Enter</span>
+            <span>to Run</span>
+          </div>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -253,6 +287,7 @@ export function CodeEditor({
             onClick={handleRun}
             disabled={isRunning}
             className="flex items-center gap-2 px-4 py-1.5 bg-[#10B981] text-white text-sm font-medium rounded-lg hover:bg-[#059669] transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+            title="Run code (Ctrl+Enter)"
           >
             {isRunning ? (
               <>
@@ -270,6 +305,7 @@ export function CodeEditor({
             onClick={handleSubmit}
             disabled={isRunning}
             className="flex items-center gap-2 px-4 py-1.5 bg-[#3B82F6] text-white text-sm font-medium rounded-lg hover:bg-[#2563EB] transition-colors disabled:cursor-not-allowed disabled:opacity-70"
+            title="Submit code (Ctrl+Shift+Enter)"
           >
             {isRunning ? (
               <>
