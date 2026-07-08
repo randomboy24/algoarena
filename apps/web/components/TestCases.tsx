@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronDown, ChevronUp, CheckCircle, XCircle } from "lucide-react";
+import { ChevronDown, ChevronUp, CheckCircle, XCircle, Eye, EyeOff } from "lucide-react";
 
 interface TestCase {
   input: string;
@@ -16,6 +16,7 @@ export function TestCases({ testCases }: TestCasesProps) {
   const [activeCase, setActiveCase] = useState(0);
   const [isExpanded, setIsExpanded] = useState(true);
   const [testResults, setTestResults] = useState<boolean[] | null>(null);
+  const [showExpectedOutput, setShowExpectedOutput] = useState(true);
 
   // Mock function to simulate test results
   const runTests = () => {
@@ -32,18 +33,28 @@ export function TestCases({ testCases }: TestCasesProps) {
           className="flex items-center gap-2 text-white hover:text-[#3B82F6] transition-colors"
         >
           <span className="text-sm font-medium">Test Cases</span>
+          <span className="text-xs text-[#6B7280] bg-[#0A1929] px-2 py-0.5 rounded-full">
+            {testCases.length}
+          </span>
           {isExpanded ? (
             <ChevronDown className="w-4 h-4" />
           ) : (
             <ChevronUp className="w-4 h-4" />
           )}
         </button>
-        <button
-          onClick={runTests}
-          className="text-xs px-3 py-1 bg-[#0A1929] text-[#9CA3AF] hover:text-white rounded-lg border border-[#374151] hover:border-[#3B82F6] transition-colors"
-        >
-          Run Tests
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowExpectedOutput(!showExpectedOutput)}
+            className="p-1.5 text-[#6B7280] hover:text-[#9CA3AF] hover:bg-[#374151] rounded-lg transition-colors"
+            title={showExpectedOutput ? "Hide expected output" : "Show expected output"}
+          >
+            {showExpectedOutput ? (
+              <Eye className="w-4 h-4" />
+            ) : (
+              <EyeOff className="w-4 h-4" />
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Test Cases Content */}
@@ -91,14 +102,16 @@ export function TestCases({ testCases }: TestCasesProps) {
                 {testCases[activeCase].input}
               </code>
             </div>
-            <div>
-              <span className="text-xs font-medium text-[#6B7280] block mb-2">
-                Expected Output:
-              </span>
-              <code className="block text-sm text-[#FCD34D] bg-[#0A1929] p-3 rounded-lg border border-[#374151] font-mono">
-                {testCases[activeCase].output}
-              </code>
-            </div>
+            {showExpectedOutput && (
+              <div>
+                <span className="text-xs font-medium text-[#6B7280] block mb-2">
+                  Expected Output:
+                </span>
+                <code className="block text-sm text-[#FCD34D] bg-[#0A1929] p-3 rounded-lg border border-[#374151] font-mono">
+                  {testCases[activeCase].output}
+                </code>
+              </div>
+            )}
             {testResults && (
               <div>
                 <span className="text-xs font-medium text-[#6B7280] block mb-2">
