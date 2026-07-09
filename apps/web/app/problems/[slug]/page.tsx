@@ -151,6 +151,9 @@ export default async function ProblemPage({ params }: PageProps) {
         },
       },
       testCases: {
+        where: {
+          isSample: true,
+        },
         select: {
           input: true,
           output: true,
