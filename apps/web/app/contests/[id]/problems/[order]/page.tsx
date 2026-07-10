@@ -51,6 +51,9 @@ export default async function ContestProblemPage({ params }: PageProps) {
                 },
               },
               testCases: {
+                where: {
+                  isSample: true,
+                },
                 select: {
                   input: true,
                   output: true,
